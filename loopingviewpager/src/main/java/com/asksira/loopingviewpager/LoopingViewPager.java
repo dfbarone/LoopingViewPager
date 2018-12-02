@@ -19,6 +19,7 @@ public class LoopingViewPager extends ViewPager {
     protected boolean isAutoScroll = false;
     protected boolean wrapContent = true;
     protected float aspectRatio;
+    protected boolean itemAspectRatio = false;
 
     //AutoScroll
     private int interval = 5000;
@@ -66,6 +67,7 @@ public class LoopingViewPager extends ViewPager {
             wrapContent = a.getBoolean(R.styleable.LoopingViewPager_wrap_content, true);
             interval = a.getInt(R.styleable.LoopingViewPager_scrollInterval, 5000);
             aspectRatio = a.getFloat(R.styleable.LoopingViewPager_viewpagerAspectRatio, 0f);
+            itemAspectRatio = a.getBoolean(R.styleable.LoopingViewPager_viewpagerItemAspectRatio, false);
         } finally {
             a.recycle();
         }
@@ -79,6 +81,41 @@ public class LoopingViewPager extends ViewPager {
             int height = Math.round((float) MeasureSpec.getSize(widthMeasureSpec) / aspectRatio);
             int finalWidthMeasureSpec = MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY);
             int finalHeightMeasureSpec = MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY);
+
+            /*
+             * If child items can scale, fit inside their parent by increasing left/right padding.
+             */
+            if (itemAspectRatio) {
+                // super has to be called in the beginning so the child views can be initialized.
+                super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+                // Remove padding from width
+                int childWidthSize = width - getPaddingLeft() - getPaddingRight();
+                // Make child width MeasureSpec
+                int childWidthMeasureSpec = MeasureSpec.makeMeasureSpec(childWidthSize, MeasureSpec.EXACTLY);
+                for (int i = 0; i < getChildCount(); ) {
+                    View child = getChildAt(i);
+                    child.measure(childWidthMeasureSpec, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
+                    int w = child.getMeasuredWidth();
+                    int h = child.getMeasuredHeight();
+
+                    if (h > 0 && h > height) {
+                        float ratio = (float) w / h;
+                        // Round down largest width that fits.
+                        double optimalWidth = Math.floor(height * ratio);
+                        // Round up new padding size.
+                        int newPadding = (int)Math.round((width - optimalWidth) / 2);
+                        // Set new padding values
+                        setPadding(newPadding, getPaddingTop(), newPadding, getPaddingBottom());
+                        // Remove padding from width
+                        childWidthSize = width - getPaddingLeft() - getPaddingRight();
+                        // Make child width MeasureSpec
+                        childWidthMeasureSpec = MeasureSpec.makeMeasureSpec(childWidthSize, MeasureSpec.EXACTLY);
+                        child.measure(childWidthMeasureSpec, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
+                    } else {
+                        i++;
+                    }
+                }
+            }
             super.onMeasure(finalWidthMeasureSpec, finalHeightMeasureSpec);
         } else {
             //https://stackoverflow.com/a/24666987/7870874
