@@ -17,7 +17,7 @@
         app:autoScroll="true"
         android:clipToPadding="false"
         app:scrollInterval="3000"
-        app:viewpagerAspectRatio="2.33"
+        app:viewpagerAspectRatio="1.78"
         app:viewpagerItemAspectRatio="true"/>
 
     <com.rd.PageIndicatorView
